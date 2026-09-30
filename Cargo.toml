@@ -2,6 +2,17 @@
 name = "emcommerce-api"
 version = "0.1.0"
 edition = "2024"
-publish = ["artifactory"]
+license = "MIT"
 
 [dependencies]
+axum = { version = "0.8" }
+axum-extra = { version = "0.12", features = ["typed-header"] }
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+tokio = { version = "1.53", features = ["full"] }
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+serde_json = { version = "1.0", features = ["preserve_order"] }
