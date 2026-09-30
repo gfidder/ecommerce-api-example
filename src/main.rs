@@ -1,15 +1,28 @@
 use axum::{
     Json, RequestPartsExt, Router,
-    extract::FromRequestParts,
+    extract::{FromRequestParts, State},
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use deadpool_diesel::{Manager, Pool};
+use diesel::prelude::*;
+use dotenvy::dotenv;
+use std::env;
 use tokio::signal;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::schema::users;
+
+use self::models::*;
+
+pub mod models;
+pub mod schema;
+
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
+
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -18,7 +31,19 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer().without_time())
         .init();
 
-    let app = Router::new().route("/", get(root));
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let manager =
+        deadpool_diesel::sqlite::Manager::new(database_url, deadpool_diesel::Runtime::Tokio1);
+    let pool = deadpool_diesel::sqlite::Pool::builder(manager)
+        .build()
+        .unwrap();
+
+    let app = Router::new()
+        .route("/api/user/list", get(list_users))
+        .route("/api/user/create", post(create_user))
+        .route("/", get(root))
+        .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
@@ -54,4 +79,43 @@ async fn shutdown_signal() {
 
 async fn root() -> &'static str {
     "Hello World!"
+}
+
+async fn create_user(
+    State(pool): State<deadpool_diesel::sqlite::Pool>,
+    Json(new_user): Json<NewUser>,
+) -> Result<Json<User>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    let res = conn
+        .interact(|conn| {
+            diesel::insert_into(users::table)
+                .values(new_user)
+                .returning(User::as_returning())
+                .get_result(conn)
+        })
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+
+    Ok(Json(res))
+}
+
+async fn list_users(
+    State(pool): State<deadpool_diesel::sqlite::Pool>,
+) -> Result<Json<Vec<User>>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    let res = conn
+        .interact(|conn| User::query().load(conn))
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+
+    Ok(Json(res))
+}
+
+fn internal_error<E>(err: E) -> (StatusCode, String)
+where
+    E: std::error::Error,
+{
+    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
