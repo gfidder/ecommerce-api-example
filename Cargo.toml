@@ -5,9 +5,10 @@ edition = "2024"
 license = "MIT"
 
 [dependencies]
+anyhow = "1.0"
 argon2 = "0.6"
 async-stripe = { version = "0.41", features = ["runtime-tokio-hyper"] }
-axum = { version = "0.8" }
+axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.12", features = ["typed-header"] }
 deadpool-diesel = { version = "0.7", features = ["sqlite"] }
 diesel = { version = "2.2.0", features = [
@@ -21,6 +22,7 @@ rand = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 tokio = { version = "1.53", features = ["full"] }
+tower-http = { version = "0.6.1", features = ["trace"] }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
