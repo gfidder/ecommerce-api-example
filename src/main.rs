@@ -8,6 +8,8 @@ use axum::{
 use deadpool_diesel::{Manager, Pool};
 use diesel::prelude::*;
 use dotenvy::dotenv;
+use rand::distr::{Alphanumeric, SampleString};
+use serde::Deserialize;
 use std::env;
 use tokio::signal;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -16,6 +18,7 @@ use crate::schema::users;
 
 use self::models::*;
 
+pub mod crypto;
 pub mod models;
 pub mod schema;
 
@@ -83,13 +86,25 @@ async fn root() -> &'static str {
 
 async fn create_user(
     State(pool): State<deadpool_diesel::sqlite::Pool>,
-    Json(new_user): Json<NewUser>,
+    Json(new_user): Json<NewUserQuery>,
 ) -> Result<Json<User>, (StatusCode, String)> {
+    let salt = Alphanumeric.sample_string(&mut rand::rng(), 16);
+    let pre_password_hash = salt.clone() + &new_user.password;
+
+    let new_user_vals = NewUser {
+        name: new_user.name,
+        salt,
+        password_hash: new_user.password,
+        email: new_user.email,
+        first_name: new_user.first_name,
+        last_name: new_user.last_name,
+    };
+
     let conn = pool.get().await.map_err(internal_error)?;
     let res = conn
         .interact(|conn| {
             diesel::insert_into(users::table)
-                .values(new_user)
+                .values(new_user_vals)
                 .returning(User::as_returning())
                 .get_result(conn)
         })
@@ -98,6 +113,15 @@ async fn create_user(
         .map_err(internal_error)?;
 
     Ok(Json(res))
+}
+
+#[derive(Deserialize)]
+struct NewUserQuery {
+    name: String,
+    password: String,
+    email: String,
+    first_name: String,
+    last_name: String,
 }
 
 async fn list_users(
