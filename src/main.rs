@@ -17,6 +17,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod auth;
 pub mod crypto;
+pub mod middleware;
 pub mod models;
 pub mod schema;
 
@@ -44,6 +45,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/user/list", get(auth::list_users))
         .route("/api/user/create", post(auth::create_user))
+        .route("/api/user/login", get(auth::login))
         .route("/", get(root))
         .layer(
             TraceLayer::new_for_http()

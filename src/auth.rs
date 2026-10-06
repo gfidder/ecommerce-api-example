@@ -1,9 +1,23 @@
-use axum::{Json, extract::State, http::StatusCode};
+use std::sync::LazyLock;
+
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use diesel::prelude::*;
+use jsonwebtoken::{DecodingKey, EncodingKey};
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
-use crate::{crypto::generate_password_hash, internal_error, models::*, schema::users};
+use crate::{
+    crypto::generate_password_hash,
+    internal_error,
+    models::*,
+    schema::{session, users},
+};
+
+static KEYS: LazyLock<Keys> = LazyLock::new(|| {
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    Keys::new(secret.as_bytes())
+});
 
 #[axum::debug_handler]
 pub async fn create_user(
@@ -94,4 +108,51 @@ pub struct ListUserResponse {
     email: String,
     first_name: String,
     last_name: String,
+}
+
+pub async fn login(State(pool): State<deadpool_diesel::sqlite::Pool>) {}
+
+#[derive(Serialize, HasQuery)]
+#[diesel(table_name = session)]
+pub struct LoginReturn {
+    id: i32,
+    expires_at: String,
+    token: String,
+}
+
+struct Keys {
+    encoding: EncodingKey,
+    decoding: DecodingKey,
+}
+
+impl Keys {
+    fn new(secret: &[u8]) -> Self {
+        Self {
+            encoding: EncodingKey::from_secret(secret),
+            decoding: DecodingKey::from_secret(secret),
+        }
+    }
+}
+
+impl IntoResponse for AuthError {
+    fn into_response(self) -> axum::response::Response {
+        let (status, error_message) = match self {
+            AuthError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong Credentials"),
+            AuthError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing Credentials"),
+            AuthError::TokenCreation => (StatusCode::INTERNAL_SERVER_ERROR, "Token Creation Error"),
+            AuthError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid Token"),
+        };
+        let body = Json(json!({
+            "error": error_message
+        }));
+        (status, body).into_response()
+    }
+}
+
+#[derive(Debug)]
+pub enum AuthError {
+    WrongCredentials,
+    MissingCredentials,
+    TokenCreation,
+    InvalidToken,
 }
