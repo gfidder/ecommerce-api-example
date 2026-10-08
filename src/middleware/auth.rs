@@ -1,26 +1,47 @@
 use axum::{
-    body::Body,
-    extract::{Json, Request},
-    http,
-    http::{Response, StatusCode},
+    RequestPartsExt,
+    extract::{Request, State},
     middleware::Next,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
+};
+use axum_extra::{
+    TypedHeader,
+    headers::{Authorization, Cookie, authorization::Bearer},
+    typed_header::TypedHeaderRejectionReason,
 };
 
-use crate::auth::AuthError;
+use crate::{AppState, auth::AuthError, error::Result};
 
-pub async fn authorization_middleware(
-    mut request: Request,
+pub async fn auth_middleware(
+    State(state): State<AppState>,
+    request: Request,
     next: Next,
-) -> Result<Response<Body>, AuthError> {
-    let auth_header = request.headers_mut().get(http::header::AUTHORIZATION);
-    let auth_header = match auth_header {
-        Some(header) => header.to_str().map_err(|_| AuthError::WrongCredentials)?,
-        None => return Err(AuthError::MissingCredentials),
-    };
-    let mut header = auth_header.split_whitespace();
-    let (bearer, token) = (header.next(), header.next());
-    // let token_data = match
+) -> Result<Response> {
+    let (mut parts, body) = request.into_parts();
 
-    Ok(next.run(request).await)
+    let access_token = match parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
+        Ok(header) => Some(header.token().to_string()),
+        Err(err) => {
+            if matches!(err.reason(), TypedHeaderRejectionReason::Missing) {
+                parts.extract::<TypedHeader<Cookie>>().await.ok().and_then(
+                    |TypedHeader(cookies)| cookies.get("access_token").map(ToString::to_string),
+                )
+            } else {
+                return Ok(AuthError::InvalidToken.into_response());
+            }
+        }
+    };
+
+    let Some(access_token) = access_token else {
+        return Ok(AuthError::MissingCredentials.into_response());
+    };
+
+    let _token_details = match state.auth.access.verify_token(&access_token) {
+        Ok(details) => details,
+        Err(err) => return Ok(err.into_response()),
+    };
+
+    let req = Request::from_parts(parts, body);
+
+    Ok(next.run(req).await)
 }

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
+    AppState,
     crypto::generate_password_hash,
     internal_error,
     models::*,
@@ -21,9 +22,11 @@ static KEYS: LazyLock<Keys> = LazyLock::new(|| {
 
 #[axum::debug_handler]
 pub async fn create_user(
-    State(pool): State<deadpool_diesel::sqlite::Pool>,
+    State(state): State<AppState>,
     Json(new_user): Json<NewUserQuery>,
 ) -> Result<Json<NewUserResponse>, (StatusCode, String)> {
+    let pool = state.pool;
+
     let mut rand: StdRng = rand::make_rng();
     let conn = pool.get().await.map_err(internal_error)?;
 
@@ -88,8 +91,10 @@ pub struct NewUserResponse {
 }
 
 pub async fn list_users(
-    State(pool): State<deadpool_diesel::sqlite::Pool>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<ListUserResponse>>, (StatusCode, String)> {
+    let pool = state.pool;
+
     let conn = pool.get().await.map_err(internal_error)?;
     let res: Vec<ListUserResponse> = conn
         .interact(|conn| ListUserResponse::query().load(conn))
@@ -110,7 +115,7 @@ pub struct ListUserResponse {
     last_name: String,
 }
 
-pub async fn login(State(pool): State<deadpool_diesel::sqlite::Pool>) {}
+pub async fn login(State(state): State<AppState>) {}
 
 #[derive(Serialize, HasQuery)]
 #[diesel(table_name = session)]

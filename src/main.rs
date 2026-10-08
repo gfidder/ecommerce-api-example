@@ -8,21 +8,57 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use deadpool_diesel::{Manager, Pool};
+use diesel::SqliteConnection;
 use dotenvy::dotenv;
-use std::env;
+use std::{env, sync::Arc};
 use tokio::signal;
 use tower_http::trace::TraceLayer;
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::{
+    config::Config,
+    context::{AppContext, AuthContext},
+    error::{Report, Result},
+};
+
 pub mod auth;
+pub mod config;
+pub mod context;
 pub mod crypto;
+pub mod error;
 pub mod middleware;
 pub mod models;
 pub mod schema;
 
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: Pool<Manager<SqliteConnection>>,
+    pub auth: AuthContext,
+}
+
+impl AppState {
+    pub async fn try_from(config: &Config) -> Result<Self, Report> {
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+        let manager =
+            deadpool_diesel::sqlite::Manager::new(database_url, deadpool_diesel::Runtime::Tokio1);
+        let pool = deadpool_diesel::sqlite::Pool::builder(manager)
+            .build()
+            .unwrap();
+
+        let auth = AuthContext {
+            access: config.auth().access().try_into()?,
+            refresh: config.auth().refresh().try_into()?,
+        };
+
+        Ok(Self { pool, auth })
+    }
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     dotenv().ok();
 
     tracing_subscriber::registry()
@@ -41,6 +77,14 @@ async fn main() {
     let pool = deadpool_diesel::sqlite::Pool::builder(manager)
         .build()
         .unwrap();
+
+    let config = Config::load()?;
+
+    config.logger().setup()?;
+
+    let _ctx = Arc::new(AppContext::try_from(&config).await?);
+
+    let state = AppState::try_from(&config).await?;
 
     let app = Router::new()
         .route("/api/user/list", get(auth::list_users))
@@ -62,14 +106,14 @@ async fn main() {
                 })
                 .on_failure(()),
         )
-        .with_state(pool);
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .unwrap();
+        .map_err(Into::into)
 }
 
 async fn shutdown_signal() {

@@ -10,21 +10,34 @@ argon2 = "0.6"
 async-stripe = { version = "0.41", features = ["runtime-tokio-hyper"] }
 axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.12", features = ["typed-header"] }
+chrono = { version = "0.4.42", features = ["serde"] }
+color-eyre = "0.6.5"
+config = { version = "0.15.18", features = ["yaml"] }
 deadpool-diesel = { version = "0.7", features = ["sqlite"] }
 diesel = { version = "2.2.0", features = [
     "sqlite",
     "returning_clauses_for_sqlite_3_35",
 ] }
 dotenvy = "0.15"
+futures-util = "0.3.31"
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 libsqlite3-sys = { version = "0.30", features = ["bundled"] }
 rand = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
+thiserror = "2.0.17"
 tokio = { version = "1.53", features = ["full"] }
+tower = { version = "0.5.2", features = ["tracing", "tokio"] }
 tower-http = { version = "0.6.1", features = ["trace"] }
 tracing = { version = "0.1" }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-error = "0.2.1"
+tracing-subscriber = { version = "0.3", features = [
+    "env-filter",
+    "serde",
+    "tracing",
+    "json",
+] }
+uuid = { version = "1.27", features = ["fast-rng", "serde", "v4"] }
 
 [dev-dependencies]
 serde_json = { version = "1.0", features = ["preserve_order"] }
