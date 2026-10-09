@@ -8,9 +8,10 @@ logger:
   format: pretty # json, pretty, compact, full
   ## Crates to log i.e *name of your crate*, sqlx, axum, etc
   crates:
+    - "emcommerce_api"
     - "auth"
     - "axum"
-    - "sqlx"
+    - "diesel"
     - "tower"
     - "tower-http"
 
