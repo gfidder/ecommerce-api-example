@@ -6,22 +6,17 @@ use crate::error::Result;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RsaJwtConfig {
-    private_key: PathBuf,
-    public_key: PathBuf,
+    secret: String,
     exp: i64,
 }
 
 impl RsaJwtConfig {
     pub fn encoding_key(&self) -> Result<EncodingKey> {
-        let contents = std::fs::read_to_string(&self.private_key)?;
-
-        EncodingKey::from_rsa_pem(contents.as_bytes()).map_err(Into::into)
+        Ok(EncodingKey::from_secret(self.secret.as_bytes()))
     }
 
     pub fn decoding_key(&self) -> Result<DecodingKey> {
-        let contents = std::fs::read_to_string(&self.public_key)?;
-
-        DecodingKey::from_rsa_pem(contents.as_bytes()).map_err(Into::into)
+        Ok(DecodingKey::from_secret(self.secret.as_bytes()))
     }
 
     pub fn exp(&self) -> i64 {

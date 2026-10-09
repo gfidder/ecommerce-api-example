@@ -1,0 +1,23 @@
+server:
+  protocol: http
+  host: 127.0.0.1
+  port: 5000
+
+logger:
+  level: trace # off, warn, trace, error, info, debug
+  format: pretty # json, pretty, compact, full
+  ## Crates to log i.e *name of your crate*, sqlx, axum, etc
+  crates:
+    - "auth"
+    - "axum"
+    - "sqlx"
+    - "tower"
+    - "tower-http"
+
+auth:
+  access:
+    secret: D5rbLMfEfSflm6/ylDXNGLTB1Yh/KZe3S8beHH6/xC0=
+    exp: 900 # Seconds 15 minutes
+  refresh:
+    secret: WLCjPkOV/ATKMuuigZ8TRCiaukDMUBPh/dTeXrURPFQ=
+    exp: 2419200 # Seconds 4 Weeks
