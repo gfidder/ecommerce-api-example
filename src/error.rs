@@ -67,8 +67,8 @@ pub enum Error {
     TryInit(#[from] tracing_subscriber::util::TryInitError),
     // #[error(transparent)]
     // Migrate(#[from] sqlx::migrate::MigrateError),
-    // #[error(transparent)]
-    // Redis(#[from] redis::RedisError),
+    #[error(transparent)]
+    Redis(#[from] redis::RedisError),
     #[error(transparent)]
     JsonWebToken(#[from] jsonwebtoken::errors::Error),
     #[error("{0}")]

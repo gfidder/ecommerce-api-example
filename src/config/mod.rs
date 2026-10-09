@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod db;
 pub mod log;
 
 use serde::Deserialize;
@@ -7,6 +8,7 @@ use crate::error::Result;
 
 pub use self::{
     auth::{AuthConfig, RsaJwtConfig},
+    db::RedisConfig,
     log::Logger,
 };
 
@@ -32,7 +34,7 @@ pub struct Config {
     server: ServerConfig,
     logger: Logger,
     // database: DatabaseConfig,
-    // redis: RedisConfig,
+    redis: RedisConfig,
     auth: AuthConfig,
 }
 
@@ -72,9 +74,9 @@ impl Config {
         &self.logger
     }
 
-    // pub fn redis(&self) -> &RedisConfig {
-    //     &self.redis
-    // }
+    pub fn redis(&self) -> &RedisConfig {
+        &self.redis
+    }
 
     // pub fn database(&self) -> &DatabaseConfig {
     //     &self.database

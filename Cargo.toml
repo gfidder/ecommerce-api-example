@@ -9,7 +9,12 @@ anyhow = "1.0"
 argon2 = "0.6"
 async-stripe = { version = "0.41", features = ["runtime-tokio-hyper"] }
 axum = { version = "0.8", features = ["macros"] }
-axum-extra = { version = "0.12", features = ["typed-header"] }
+axum-extra = { version = "0.12", features = [
+    "typed-header",
+    "cookie",
+    "routing",
+    "typed-routing",
+] }
 chrono = { version = "0.4.42", features = ["serde"] }
 color-eyre = "0.6.5"
 config = { version = "0.15.18", features = ["yaml"] }
@@ -23,9 +28,11 @@ futures-util = "0.3.31"
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 libsqlite3-sys = { version = "0.30", features = ["bundled"] }
 rand = "0.10"
+redis = { version = "0.32.7", features = ["tokio-comp"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 thiserror = "2.0.17"
+time = { version = "0.3.44", features = ["serde"] }
 tokio = { version = "1.53", features = ["full"] }
 tower = { version = "0.5.2", features = ["tracing", "tokio"] }
 tower-http = { version = "0.6.1", features = ["trace"] }

@@ -15,6 +15,9 @@ logger:
     - "tower"
     - "tower-http"
 
+redis:
+  uri: redis://localhost:6379
+
 auth:
   access:
     secret: D5rbLMfEfSflm6/ylDXNGLTB1Yh/KZe3S8beHH6/xC0=

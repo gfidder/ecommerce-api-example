@@ -9,14 +9,17 @@ use axum::{
 use deadpool_diesel::{Manager, Pool};
 use diesel::SqliteConnection;
 use dotenvy::dotenv;
+use redis::{AsyncTypedCommands, aio::MultiplexedConnection};
 use std::{env, sync::Arc};
 use tokio::signal;
 use tower_http::trace::TraceLayer;
+use uuid::Uuid;
 
 use crate::{
     config::Config,
     context::{AppContext, AuthContext},
     error::{Report, Result},
+    models::TokenDetails,
 };
 
 pub mod auth;
@@ -32,9 +35,34 @@ pub mod schema;
 pub struct AppState {
     pub pool: Pool<Manager<SqliteConnection>>,
     pub auth: AuthContext,
+    pub redis: MultiplexedConnection,
 }
 
 impl AppState {
+    pub async fn store_refresh_token(&self, token_details: &TokenDetails) -> Result<(), Report> {
+        let mut conn = self.redis.clone();
+        let key = format!("refresh_token:{}", token_details.token_id);
+        let value = serde_json::to_string(token_details)?;
+
+        if let Some(expires_in) = token_details.expires_in {
+            let ttl = (expires_in - chrono::Utc::now().timestamp()) as u64;
+            conn.set_ex(&key, &value, ttl).await?;
+        } else {
+            conn.set(&key, &value).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn revoke_refresh_token(&self, token_id: Uuid) -> Result<(), Report> {
+        let mut conn = self.redis.clone();
+        let key = format!("refresh_token:{}", token_id);
+
+        conn.del(&key).await?;
+
+        Ok(())
+    }
+
     pub async fn try_from(config: &Config) -> Result<Self, Report> {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
@@ -44,12 +72,14 @@ impl AppState {
             .build()
             .unwrap();
 
+        let redis = config.redis().multiplexed_connection().await?;
+
         let auth = AuthContext {
             access: config.auth().access().try_into()?,
             refresh: config.auth().refresh().try_into()?,
         };
 
-        Ok(Self { pool, auth })
+        Ok(Self { pool, auth, redis })
     }
 }
 

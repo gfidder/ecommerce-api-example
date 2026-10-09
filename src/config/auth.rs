@@ -1,6 +1,5 @@
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use serde::Deserialize;
-use std::path::PathBuf;
 
 use crate::error::Result;
 

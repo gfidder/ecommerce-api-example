@@ -1,6 +1,12 @@
 use std::sync::LazyLock;
 
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{
+    Json, Router,
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::{get, post},
+};
 use diesel::prelude::*;
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use rand::rngs::StdRng;
@@ -10,15 +16,11 @@ use serde_json::json;
 use crate::{
     AppState,
     crypto::generate_password_hash,
+    error::Result,
     internal_error,
     models::*,
     schema::{session, users},
 };
-
-static KEYS: LazyLock<Keys> = LazyLock::new(|| {
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    Keys::new(secret.as_bytes())
-});
 
 #[axum::debug_handler]
 pub async fn create_user(
@@ -115,7 +117,25 @@ pub struct ListUserResponse {
     last_name: String,
 }
 
-pub async fn login(State(state): State<AppState>) {}
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct LoginUser {
+    email: String,
+    password: String,
+}
+
+async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> Result<()> {
+    let conn = state.pool.get().await?;
+
+    let user: User = conn
+        .interact(|conn| {
+            User::query()
+                .select(users::email.eq(params.email))
+                .first(conn)
+        })
+        .await??;
+
+    Ok(())
+}
 
 #[derive(Serialize, HasQuery)]
 #[diesel(table_name = session)]
@@ -123,20 +143,6 @@ pub struct LoginReturn {
     id: i32,
     expires_at: String,
     token: String,
-}
-
-struct Keys {
-    encoding: EncodingKey,
-    decoding: DecodingKey,
-}
-
-impl Keys {
-    fn new(secret: &[u8]) -> Self {
-        Self {
-            encoding: EncodingKey::from_secret(secret),
-            decoding: DecodingKey::from_secret(secret),
-        }
-    }
 }
 
 impl IntoResponse for AuthError {
@@ -160,4 +166,10 @@ pub enum AuthError {
     MissingCredentials,
     TokenCreation,
     InvalidToken,
+}
+
+pub fn router(state: AppState) -> Router {
+    Router::new()
+        .route("/login", post(login))
+        .with_state(state.clone())
 }
