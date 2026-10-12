@@ -1,6 +1,0 @@
--- Your SQL goes here
-CREATE TABLE users (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR NOT NULL,
-    hair_color VARCHAR
-)

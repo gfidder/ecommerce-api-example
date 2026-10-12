@@ -6,8 +6,11 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
-use deadpool_diesel::{Manager, Pool};
-use diesel::SqliteConnection;
+use diesel::prelude::*;
+use diesel_async::{
+    AsyncPgConnection, RunQueryDsl,
+    pooled_connection::{AsyncDieselConnectionManager, bb8},
+};
 use dotenvy::dotenv;
 use redis::{AsyncTypedCommands, aio::MultiplexedConnection};
 use std::{env, sync::Arc};
@@ -31,9 +34,11 @@ pub mod middleware;
 pub mod models;
 pub mod schema;
 
+pub type Pool = bb8::Pool<AsyncPgConnection>;
+
 #[derive(Clone)]
 pub struct AppState {
-    pub pool: Pool<Manager<SqliteConnection>>,
+    pub pool: Pool,
     pub auth: AuthContext,
     pub redis: MultiplexedConnection,
 }
@@ -66,11 +71,9 @@ impl AppState {
     pub async fn try_from(config: &Config) -> Result<Self, Report> {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-        let manager =
-            deadpool_diesel::sqlite::Manager::new(database_url, deadpool_diesel::Runtime::Tokio1);
-        let pool = deadpool_diesel::sqlite::Pool::builder(manager)
-            .build()
-            .unwrap();
+        let pg_config =
+            AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
+        let pool = bb8::Pool::builder().build(pg_config).await.unwrap();
 
         let redis = config.redis().multiplexed_connection().await?;
 

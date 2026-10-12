@@ -2,23 +2,30 @@
 
 diesel::table! {
     session (id) {
-        id -> Integer,
-        expires_at -> Timestamp,
+        id -> Int4,
+        expires_at -> Timestamptz,
         token -> Text,
-        created_at -> Timestamp,
-        user_id -> Integer,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        user_id -> Int4,
     }
 }
 
 diesel::table! {
     users (id) {
-        id -> Integer,
-        name -> Text,
+        id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
         salt -> Text,
         password_hash -> Text,
-        email -> Text,
-        first_name -> Text,
-        last_name -> Text,
+        #[max_length = 255]
+        email -> Varchar,
+        #[max_length = 255]
+        first_name -> Varchar,
+        #[max_length = 255]
+        last_name -> Varchar,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 

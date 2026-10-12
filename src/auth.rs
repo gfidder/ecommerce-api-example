@@ -7,8 +7,9 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use jsonwebtoken::{DecodingKey, EncodingKey};
+use diesel_async::RunQueryDsl;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -30,12 +31,11 @@ pub async fn create_user(
     let pool = state.pool;
 
     let mut rand: StdRng = rand::make_rng();
-    let conn = pool.get().await.map_err(internal_error)?;
+    let mut conn = pool.get().await.map_err(internal_error)?;
 
-    let res: Vec<User> = conn
-        .interact(|conn| User::query().load(conn))
+    let res: Vec<User> = User::query()
+        .load(&mut conn)
         .await
-        .map_err(internal_error)?
         .map_err(internal_error)?;
 
     if res.iter().find(|&x| x.name == new_user.name).is_some() {
@@ -58,15 +58,11 @@ pub async fn create_user(
         last_name: new_user.last_name,
     };
 
-    let result = conn
-        .interact(|conn| {
-            diesel::insert_into(users::table)
-                .values(new_user_vals)
-                .returning(User::as_returning())
-                .get_result(conn)
-        })
+    let result: User = diesel::insert_into(users::table)
+        .values(new_user_vals)
+        .returning(User::as_returning())
+        .get_result(&mut conn)
         .await
-        .map_err(internal_error)?
         .map_err(internal_error)?;
 
     let response = NewUserResponse {
@@ -97,11 +93,10 @@ pub async fn list_users(
 ) -> Result<Json<Vec<ListUserResponse>>, (StatusCode, String)> {
     let pool = state.pool;
 
-    let conn = pool.get().await.map_err(internal_error)?;
-    let res: Vec<ListUserResponse> = conn
-        .interact(|conn| ListUserResponse::query().load(conn))
+    let mut conn = pool.get().await.map_err(internal_error)?;
+    let res = ListUserResponse::query()
+        .load(&mut conn)
         .await
-        .map_err(internal_error)?
         .map_err(internal_error)?;
 
     Ok(Json(res))
@@ -124,15 +119,13 @@ struct LoginUser {
 }
 
 async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> Result<()> {
-    let conn = state.pool.get().await?;
+    let mut conn = state.pool.get().await?;
 
-    let user: User = conn
-        .interact(|conn| {
-            User::query()
-                .select(users::email.eq(params.email))
-                .first(conn)
-        })
-        .await??;
+    let user: User = User::query()
+        .filter(users::email.eq(params.email))
+        .first(&mut conn)
+        .await
+        .unwrap();
 
     Ok(())
 }
@@ -141,7 +134,7 @@ async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> 
 #[diesel(table_name = session)]
 pub struct LoginReturn {
     id: i32,
-    expires_at: String,
+    expires_at: DateTime<Utc>,
     token: String,
 }
 

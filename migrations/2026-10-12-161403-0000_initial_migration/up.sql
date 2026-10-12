@@ -1,0 +1,43 @@
+-- Your SQL goes here
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE users (
+    id SERIAL NOT NULL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    salt TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "session" (
+    id SERIAL NOT NULL PRIMARY KEY,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    token TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER NOT NULL,
+    FOREIGN KEY ("user_id") REFERENCES "users"("id")
+);
+CREATE UNIQUE INDEX "session_token_key" on "session"("token");
+
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_user_updated_at_trigger
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_session_updated_at_trigger
+BEFORE UPDATE ON "session"
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
