@@ -1,19 +1,15 @@
 use axum::{
-    Json, RequestPartsExt, Router,
-    extract::{
-        FromRequest, FromRequestParts, MatchedPath, Request, State, rejection::JsonRejection,
-    },
+    Router,
     http::StatusCode,
     routing::{get, post},
 };
-use diesel::prelude::*;
 use diesel_async::{
-    AsyncPgConnection, RunQueryDsl,
+    AsyncPgConnection,
     pooled_connection::{AsyncDieselConnectionManager, bb8},
 };
 use dotenvy::dotenv;
 use redis::{AsyncTypedCommands, aio::MultiplexedConnection};
-use std::{env, sync::Arc};
+use std::env;
 use tokio::signal;
 use tower_http::trace::TraceLayer;
 use uuid::Uuid;

@@ -1,8 +1,8 @@
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use uuid::Uuid;
 
 use crate::{
-    config::{Config, RsaJwtConfig},
+    config::RsaJwtConfig,
     error::Report,
     models::{TokenClaims, TokenDetails},
 };

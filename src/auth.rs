@@ -1,5 +1,3 @@
-use std::sync::LazyLock;
-
 use axum::{
     Extension, Json, Router,
     body::Body,
@@ -236,21 +234,15 @@ pub enum AuthError {
 
 pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
-        .route(
-            "/login",
-            post(login).route_layer(from_fn_with_state(
-                state.clone(),
-                middleware::auth_middleware,
-            )),
-        )
+        .route("/login", post(login))
         .route(
             "/current",
             get(current)
-                .route_layer(from_fn_with_state(
+                .layer(from_fn_with_state(
                     state.clone(),
                     middleware::auth_middleware,
                 ))
-                .route_layer(from_fn_with_state(
+                .layer(from_fn_with_state(
                     state.clone(),
                     middleware::refresh_middleware,
                 )),
