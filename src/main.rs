@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 use crate::{
     config::Config,
-    context::{AppContext, AuthContext},
+    context::AuthContext,
     error::{Report, Result},
     models::TokenDetails,
 };
@@ -101,7 +101,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/api/user/list", get(auth::list_users))
         .route("/api/user/create", post(auth::create_user))
-        .route("/api/user/login", get(auth::login))
+        .nest("/api/auth", auth::router(&state))
         .route("/", get(root))
         .layer(
             TraceLayer::new_for_http()

@@ -11,6 +11,8 @@ use std::{
 };
 use tracing_subscriber::filter::FromEnvError;
 
+use crate::models::ModelError;
+
 #[derive(Debug)]
 pub struct Report(pub color_eyre::Report);
 
@@ -83,8 +85,8 @@ pub enum Error {
     SerdeJson(#[from] serde_json::error::Error),
     // #[error(transparent)]
     // Auth(#[from] AuthError),
-    // #[error(transparent)]
-    // Model(#[from] ModelError),
+    #[error(transparent)]
+    Model(#[from] ModelError),
 }
 
 impl From<argon2::Error> for Error {

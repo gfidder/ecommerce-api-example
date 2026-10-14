@@ -1,12 +1,18 @@
 use std::sync::LazyLock;
 
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
+    body::Body,
     extract::State,
-    http::StatusCode,
+    http::{
+        HeaderValue, StatusCode,
+        header::{AUTHORIZATION, SET_COOKIE},
+    },
+    middleware::from_fn_with_state,
     response::{IntoResponse, Response},
     routing::{get, post},
 };
+use axum_extra::extract::cookie;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -16,9 +22,9 @@ use serde_json::json;
 
 use crate::{
     AppState,
-    crypto::generate_password_hash,
+    crypto::{self, generate_password_hash},
     error::Result,
-    internal_error,
+    internal_error, middleware,
     models::*,
     schema::{session, users},
 };
@@ -118,8 +124,10 @@ struct LoginUser {
     password: String,
 }
 
-async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> Result<()> {
+async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> Result<Response> {
     let mut conn = state.pool.get().await?;
+
+    tracing::debug!("Made it here");
 
     let user: User = User::query()
         .filter(users::email.eq(params.email))
@@ -127,7 +135,72 @@ async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> 
         .await
         .unwrap();
 
-    Ok(())
+    crypto::verify_password(&params.password, &user.password_hash)?;
+
+    let access_token = state.auth.access.generate_token(user.pid)?;
+    let refresh_token = state.auth.refresh.generate_token(user.pid)?;
+
+    state.store_refresh_token(&refresh_token).await?;
+
+    let access_token = access_token.token.unwrap();
+    let refresh_token = refresh_token.token.unwrap();
+
+    let access_cookie = cookie::Cookie::build(("access_token", &access_token))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::seconds(state.auth.access.exp))
+        .same_site(cookie::SameSite::Lax);
+
+    let refresh_cookie = cookie::Cookie::build(("refresh_token", &refresh_token))
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::seconds(state.auth.refresh.exp))
+        .same_site(cookie::SameSite::Lax);
+
+    let mut res = Response::builder().status(StatusCode::OK).body(Body::from(
+        json!({
+            "access_token": &access_token,
+            "name": &user.name,
+            // "created_at": user.
+        })
+        .to_string(),
+    ))?;
+
+    res.headers_mut()
+        .append(AUTHORIZATION, HeaderValue::from_str(access_token.as_str())?);
+    res.headers_mut().append(
+        SET_COOKIE,
+        HeaderValue::from_str(access_cookie.to_string().as_str())?,
+    );
+    res.headers_mut().append(
+        SET_COOKIE,
+        HeaderValue::from_str(refresh_cookie.to_string().as_str())?,
+    );
+
+    Ok(res)
+}
+
+async fn current(
+    Extension(auth): Extension<TokenDetails>,
+    State(state): State<AppState>,
+) -> Result<Response> {
+    let mut conn = state.pool.get().await?;
+
+    let user: User = User::query()
+        .filter(users::pid.eq(auth.user_pid))
+        .first(&mut conn)
+        .await
+        .map_err(|_| crate::error::Error::Model(ModelError::EntityNotFound))?;
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "name": &user.name,
+            "pid": &user.pid,
+            "email": &user.email
+        })),
+    )
+        .into_response())
 }
 
 #[derive(Serialize, HasQuery)]
@@ -161,8 +234,26 @@ pub enum AuthError {
     InvalidToken,
 }
 
-pub fn router(state: AppState) -> Router {
+pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
-        .route("/login", post(login))
+        .route(
+            "/login",
+            post(login).route_layer(from_fn_with_state(
+                state.clone(),
+                middleware::auth_middleware,
+            )),
+        )
+        .route(
+            "/current",
+            get(current)
+                .route_layer(from_fn_with_state(
+                    state.clone(),
+                    middleware::auth_middleware,
+                ))
+                .route_layer(from_fn_with_state(
+                    state.clone(),
+                    middleware::refresh_middleware,
+                )),
+        )
         .with_state(state.clone())
 }

@@ -8,33 +8,6 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct AppContext {
-    pub config: Config,
-    pub auth: AuthContext,
-}
-
-impl AppContext {
-    pub async fn store_refresh_token(&self, token_details: &TokenDetails) -> Result<(), Report> {
-        let key = format!("refresh_token:{}", token_details.token_id);
-        let value = serde_json::to_string(token_details)?;
-
-        Ok(())
-    }
-
-    pub async fn try_from(config: &Config) -> Result<Self, Report> {
-        let auth = AuthContext {
-            access: config.auth().access().try_into()?,
-            refresh: config.auth().refresh().try_into()?,
-        };
-
-        Ok(Self {
-            auth,
-            config: config.clone(),
-        })
-    }
-}
-
-#[derive(Clone)]
 pub struct AuthContext {
     pub access: JwtContext,
     pub refresh: JwtContext,
@@ -66,7 +39,7 @@ impl JwtContext {
             nbf: now.timestamp(),
         };
 
-        let header = Header::new(Algorithm::RS256);
+        let header = Header::default();
 
         let token = jsonwebtoken::encode(&header, &claims, &self.encoding_key)?;
 
@@ -76,7 +49,7 @@ impl JwtContext {
     }
 
     pub fn verify_token(&self, token: &str) -> Result<TokenDetails, Report> {
-        let validation = Validation::new(Algorithm::RS256);
+        let validation = Validation::default();
 
         let token_data =
             jsonwebtoken::decode::<TokenClaims>(token, &self.decoding_key, &validation)?;

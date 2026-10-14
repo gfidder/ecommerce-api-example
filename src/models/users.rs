@@ -1,11 +1,13 @@
 use crate::schema::users;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(HasQuery, Serialize)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i32,
+    pub pid: Uuid,
     pub name: String,
     pub salt: String,
     pub password_hash: String,

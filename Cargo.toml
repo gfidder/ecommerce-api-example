@@ -18,7 +18,7 @@ axum-extra = { version = "0.12", features = [
 chrono = { version = "0.4.42", features = ["serde"] }
 color-eyre = "0.6.5"
 config = { version = "0.15.18", features = ["yaml"] }
-diesel = { version = "2.2.0", features = ["chrono"] }
+diesel = { version = "2.2.0", features = ["chrono", "uuid"] }
 diesel-async = { version = "0.9", features = ["postgres", "bb8"] }
 dotenvy = "0.15"
 futures-util = "0.3.31"
@@ -42,7 +42,7 @@ tracing-subscriber = { version = "0.3", features = [
     "tracing",
     "json",
 ] }
-uuid = { version = "1.27", features = ["fast-rng", "serde", "v4"] }
+uuid = { version = "1.28", features = ["serde", "v4"] }
 
 [dev-dependencies]
 serde_json = { version = "1.0", features = ["preserve_order"] }
