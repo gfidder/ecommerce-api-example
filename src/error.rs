@@ -19,7 +19,7 @@ pub struct Report(pub color_eyre::Report);
 impl IntoResponse for Report {
     fn into_response(self) -> Response {
         let err = self.0;
-        let err_string = format!("{:?}", &err);
+        let err_string = format!("{:?}", err);
 
         tracing::error!("An error occurred: {}", err_string);
 
@@ -107,6 +107,8 @@ impl From<PasswordHashError> for Error {
 impl Error {
     pub fn response(&self) -> Response {
         let (status, message) = match self {
+            Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
+            Self::Model(err) => return err.response(),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         };
 

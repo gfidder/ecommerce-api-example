@@ -53,8 +53,8 @@ mod tests {
 
     #[test]
     fn test_verify_password() {
-        let password = "password123!".into();
-        let hash = "$argon2id$v=19$m=19456,t=2,p=1$SWhQaTNvWkNuYVd2TDJvSQ$whersSRXMEV6FQmlVQPSt4XOJc1pKF9ZCd2bKJNJZyY".into();
+        let password = "password123!";
+        let hash = "$argon2id$v=19$m=19456,t=2,p=1$SWhQaTNvWkNuYVd2TDJvSQ$whersSRXMEV6FQmlVQPSt4XOJc1pKF9ZCd2bKJNJZyY";
 
         verify_password(password, hash).unwrap();
     }

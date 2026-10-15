@@ -21,11 +21,11 @@ pub struct ServerConfig {
 
 impl ServerConfig {
     pub fn address(&self) -> String {
-        format!("{}:{}", &self.host, &self.port)
+        format!("{}:{}", self.host, self.port)
     }
 
     pub fn url(&self) -> String {
-        format!("{}://{}", &self.protocol, self.address())
+        format!("{}://{}", self.protocol, self.address())
     }
 }
 
