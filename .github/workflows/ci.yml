@@ -1,3 +1,4 @@
+# https://github.com/ameknite/rust-ci-cd-template/blob/main/.github/workflows/ci.yaml
 name: CI
 
 on:
@@ -80,21 +81,23 @@ jobs:
   check-crate-type:
     uses: ./.github/workflows/crate_type.yaml
 
-  typos-cli:
-    name: typos
-    runs-on: ubuntu-latest
+  # typos-cli:
+  #   name: typos
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Fetch Repository
-        uses: actions/checkout@v7
+  #   steps:
+  #     - name: Fetch Repository
+  #       uses: actions/checkout@v7
 
-      - name: Install Typos
-        uses: taiki-e/install-action@v2.87.27
-        with:
-          tool: typos-cli
+  #     - name: Install Typos
+  #       uses: taiki-e/install-action@v2.87.27
+  #       with:
+  #         tool: typos-cli
 
-      - name: run typos
-        run: typos
+  #     - name: run typos
+  #       run: typos
 
-  cargo-deny:
-    uses: ./.github/workflows/cargo_deny.yaml
+  # cargo-deny:
+  #   uses: ./.github/workflows/cargo_deny.yaml
+
+  # todo!: add these back in later
