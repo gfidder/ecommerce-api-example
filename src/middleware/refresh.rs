@@ -27,11 +27,11 @@ pub async fn refresh_middleware(
 
     let refresh_token = match parts.extract::<TypedHeader<Cookie>>().await {
         Ok(cookies) => cookies.get("refresh_token").map(ToString::to_string),
-        Err(_) => return Ok(AuthError::MissingCredentials.into_response()),
+        Err(_) => return Ok(AuthError::MissingCredentials.response()),
     };
 
     let Some(refresh_token) = refresh_token else {
-        return Ok(AuthError::MissingCredentials.into_response());
+        return Ok(AuthError::MissingCredentials.response());
     };
 
     let access_token = match parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
@@ -42,7 +42,7 @@ pub async fn refresh_middleware(
                     |TypedHeader(cookies)| cookies.get("access_token").map(ToString::to_string),
                 )
             } else {
-                return Ok(AuthError::InvalidToken.into_response());
+                return Ok(AuthError::InvalidToken.response());
             }
         }
     };

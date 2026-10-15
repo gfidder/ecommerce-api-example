@@ -27,13 +27,13 @@ pub async fn auth_middleware(
                     |TypedHeader(cookies)| cookies.get("access_token").map(ToString::to_string),
                 )
             } else {
-                return Ok(AuthError::InvalidToken.into_response());
+                return Ok(AuthError::InvalidToken.response());
             }
         }
     };
 
     let Some(access_token) = access_token else {
-        return Ok(AuthError::MissingCredentials.into_response());
+        return Ok(AuthError::MissingCredentials.response());
     };
 
     let _token_details = match state.auth.access.verify_token(&access_token) {

@@ -11,7 +11,7 @@ use std::{
 };
 use tracing_subscriber::filter::FromEnvError;
 
-use crate::models::ModelError;
+use crate::{auth::AuthError, models::ModelError};
 
 #[derive(Debug)]
 pub struct Report(pub color_eyre::Report);
@@ -83,8 +83,8 @@ pub enum Error {
     TokenError,
     #[error(transparent)]
     SerdeJson(#[from] serde_json::error::Error),
-    // #[error(transparent)]
-    // Auth(#[from] AuthError),
+    #[error(transparent)]
+    Auth(#[from] AuthError),
     #[error(transparent)]
     Model(#[from] ModelError),
 }
@@ -109,6 +109,7 @@ impl Error {
         let (status, message) = match self {
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
             Self::Model(err) => return err.response(),
+            Self::Auth(err) => return err.response(),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         };
 

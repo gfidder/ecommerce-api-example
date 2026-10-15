@@ -209,8 +209,20 @@ pub struct LoginReturn {
     token: String,
 }
 
-impl IntoResponse for AuthError {
-    fn into_response(self) -> axum::response::Response {
+#[derive(Debug, thiserror::Error)]
+pub enum AuthError {
+    #[error("Wrong credentials")]
+    WrongCredentials,
+    #[error("Credentials missing from request")]
+    MissingCredentials,
+    #[error("Token creation failed")]
+    TokenCreation,
+    #[error("Invalid Token")]
+    InvalidToken,
+}
+
+impl AuthError {
+    pub fn response(&self) -> Response {
         let (status, error_message) = match self {
             AuthError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong Credentials"),
             AuthError::MissingCredentials => (StatusCode::BAD_REQUEST, "Missing Credentials"),
@@ -222,14 +234,6 @@ impl IntoResponse for AuthError {
         }));
         (status, body).into_response()
     }
-}
-
-#[derive(Debug)]
-pub enum AuthError {
-    WrongCredentials,
-    MissingCredentials,
-    TokenCreation,
-    InvalidToken,
 }
 
 pub fn router(state: &AppState) -> Router<AppState> {
