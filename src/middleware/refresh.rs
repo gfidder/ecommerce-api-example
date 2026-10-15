@@ -104,7 +104,7 @@ pub async fn refresh_middleware(
     let mut req = Request::from_parts(parts, body);
     req.headers_mut().append(
         AUTHORIZATION,
-        HeaderValue::from_str(format!("Bearer: {}", &new_access_token).as_str()).unwrap(),
+        HeaderValue::from_str(format!("Bearer: {}", new_access_token).as_str()).unwrap(),
     );
     req.headers_mut().append(
         SET_COOKIE,
