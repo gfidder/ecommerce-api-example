@@ -159,7 +159,7 @@ async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> 
         json!({
             "access_token": &access_token,
             "name": &user.name,
-            // "created_at": user.
+            "created_at": &user.created_at
         })
         .to_string(),
     ))?;
