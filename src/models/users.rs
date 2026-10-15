@@ -16,7 +16,7 @@ pub struct User {
     pub first_name: String,
     pub last_name: String,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Insertable, Deserialize)]
