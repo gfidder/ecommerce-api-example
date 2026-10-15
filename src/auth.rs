@@ -201,6 +201,41 @@ async fn current(
         .into_response())
 }
 
+async fn logout(
+    Extension(auth): Extension<TokenDetails>,
+    State(state): State<AppState>,
+) -> Result<Response> {
+    state.revoke_refresh_token(auth.token_id).await?;
+
+    let access_cookie = cookie::Cookie::build(("access_token", ""))
+        .path("/")
+        .http_only(false)
+        .max_age(time::Duration::seconds(state.auth.access.exp))
+        .same_site(cookie::SameSite::Lax);
+
+    let refresh_cookie = cookie::Cookie::build(("refresh_token", ""))
+        .path("/")
+        .http_only(false)
+        .max_age(time::Duration::seconds(state.auth.refresh.exp))
+        .same_site(cookie::SameSite::Lax);
+
+    let mut res = Response::builder()
+        .status(200)
+        .body(Body::new(json!({"message": "Logout success"}).to_string()))?;
+
+    res.headers_mut().append(
+        SET_COOKIE,
+        HeaderValue::from_str(access_cookie.to_string().as_str())?,
+    );
+
+    res.headers_mut().append(
+        SET_COOKIE,
+        HeaderValue::from_str(refresh_cookie.to_string().as_str())?,
+    );
+
+    Ok(res)
+}
+
 #[derive(Serialize, HasQuery)]
 #[diesel(table_name = session)]
 pub struct LoginReturn {
@@ -242,6 +277,18 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .route(
             "/current",
             get(current)
+                .layer(from_fn_with_state(
+                    state.clone(),
+                    middleware::auth_middleware,
+                ))
+                .layer(from_fn_with_state(
+                    state.clone(),
+                    middleware::refresh_middleware,
+                )),
+        )
+        .route(
+            "/logout",
+            post(logout)
                 .layer(from_fn_with_state(
                     state.clone(),
                     middleware::auth_middleware,

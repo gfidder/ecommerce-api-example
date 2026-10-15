@@ -36,12 +36,14 @@ pub async fn auth_middleware(
         return Ok(AuthError::MissingCredentials.response());
     };
 
-    let _token_details = match state.auth.access.verify_token(&access_token) {
+    let token_details = match state.auth.access.verify_token(&access_token) {
         Ok(details) => details,
         Err(err) => return Ok(err.into_response()),
     };
 
-    let req = Request::from_parts(parts, body);
+    let mut req = Request::from_parts(parts, body);
+
+    req.extensions_mut().insert(token_details);
 
     Ok(next.run(req).await)
 }
