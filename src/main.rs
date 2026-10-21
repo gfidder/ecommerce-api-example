@@ -26,6 +26,7 @@ pub mod config;
 pub mod context;
 pub mod crypto;
 pub mod error;
+pub mod handlers;
 pub mod middleware;
 pub mod models;
 pub mod schema;
@@ -98,6 +99,7 @@ async fn main() -> Result<()> {
         .route("/api/user/list", get(auth::list_users))
         .route("/api/user/create", post(auth::create_user))
         .nest("/api/auth", auth::router(&state))
+        .nest("/api/products", handlers::products::router(&state))
         .route("/", get(root))
         .layer(
             TraceLayer::new_for_http()

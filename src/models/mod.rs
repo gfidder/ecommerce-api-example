@@ -2,10 +2,12 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub mod error;
+pub mod products;
 pub mod users;
 
 pub use self::{
     error::{ModelError, ModelResult},
+    products::{NewProduct, Product, UpdateDescription, UpdateName, UpdatePrice},
     users::{NewUser, User},
 };
 

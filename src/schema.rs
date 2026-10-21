@@ -6,7 +6,7 @@ diesel::table! {
         #[max_length = 255]
         name -> Varchar,
         description -> Text,
-        price -> Money,
+        price -> Float8,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
     }

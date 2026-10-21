@@ -125,8 +125,6 @@ struct LoginUser {
 async fn login(State(state): State<AppState>, Json(params): Json<LoginUser>) -> Result<Response> {
     let mut conn = state.pool.get().await?;
 
-    tracing::debug!("Made it here");
-
     let user: User = User::query()
         .filter(users::email.eq(params.email))
         .first(&mut conn)
