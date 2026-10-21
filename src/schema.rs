@@ -1,6 +1,18 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    products (id) {
+        id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        description -> Text,
+        price -> Money,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     session (id) {
         id -> Int4,
         expires_at -> Timestamptz,
@@ -32,4 +44,4 @@ diesel::table! {
 
 diesel::joinable!(session -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(session, users,);
+diesel::allow_tables_to_appear_in_same_query!(products, session, users,);

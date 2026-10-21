@@ -1,0 +1,14 @@
+-- Your SQL goes here
+CREATE TABLE products (
+    id SERIAL NOT NULL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    price MONEY NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER update_products_updated_at_trigger
+BEFORE UPDATE ON products
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
